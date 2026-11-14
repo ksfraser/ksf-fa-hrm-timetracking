@@ -1,16 +1,12 @@
 <?php
 declare(strict_types=1);
 namespace Ksfraser\FrontAccounting\HRM\TimeTracking\Service;
-use Ksfraser\FrontAccounting\HRM\TimeTracking\DTO\EventCodeDTO;
 use Ksfraser\FrontAccounting\HRM\TimeTracking\DTO\TimeEntryDTO;
-use Ksfraser\FrontAccounting\HRM\TimeTracking\Repository\EventCodeRepository;
 use Ksfraser\FrontAccounting\HRM\TimeTracking\Repository\TimeEntryRepository;
 use ksfraser\RelatedTo\DTO\RelatedRecordDto;
 final class TimeTrackingService {
-    private $eventRepo;
     private $timeRepo;
-    public function __construct(?EventCodeRepository $eventRepo = null, ?TimeEntryRepository $timeRepo = null) {
-        $this->eventRepo = $eventRepo ?? new EventCodeRepository();
+    public function __construct(?TimeEntryRepository $timeRepo = null) {
         $this->timeRepo = $timeRepo ?? new TimeEntryRepository();
     }
     public function resolveTimeEntryById(int $id, ?RelatedRecordDto $dto = null): array {
@@ -20,39 +16,102 @@ final class TimeTrackingService {
         }
         $t = TimeEntryDTO::fromArray($row);
         $dto = $dto ?? new RelatedRecordDto('time_entry', (string) $t->id, 'time_entry', (string) $t->id, null);
-        return array('dto' => $dto, 'fields' => array('employeeId' => $t->employeeName, 'eventCode' => $t->eventCode, 'hours' => $t->hours, 'workDate' => $t->workDate, 'payImpact' => $t->payImpact), 'labels' => $this->timeEntryLabelMap(), 'url' => '/modules/ksf_FA_HRM_TimeTracking/pages/time_entry_form.php?action=edit&time_entry_id=' . $t->id, 'label' => $t->getDisplayLabel());
+        // Resolve event code through CodeMaster
+        $eventResolved = null;
+        if ($t->eventCode !== '') {
+            $eventPayload = array(
+                'code_type' => 'hrm.event_code',
+                'code_value' => $t->eventCode,
+                'dto' => new RelatedRecordDto('code_master', '0', 'code_master', '0', null),
+            );
+            if (function_exists('hook_invoke_all')) {
+                hook_invoke_all('ksf_FA_CodeMaster', 'CODEMASTER_RESOLVE', $eventPayload);
+            }
+            $eventResolved = $eventPayload['result'] ?? null;
+        }
+        return array(
+            'dto'    => $dto,
+            'fields' => array(
+                'employeeId' => $t->employeeName,
+                'eventCode' => $t->eventCode,
+                'eventName' => $eventResolved !== null && is_array($eventResolved) && isset($eventResolved['fields']['name']) ? $eventResolved['fields']['name'] : '',
+                'hours' => $t->hours,
+                'workDate' => $t->workDate,
+                'payImpact' => $t->payImpact,
+            ),
+            'labels' => $this->timeEntryLabelMap(),
+            'url'    => '/modules/ksf_FA_HRM_TimeTracking/pages/time_entry_form.php?action=edit&time_entry_id=' . $t->id,
+            'label'  => $t->getDisplayLabel(),
+            'event_resolved' => $eventResolved,
+        );
     }
     public function resolveEventCodeById(int $id, ?RelatedRecordDto $dto = null): array {
-        $row = $this->eventRepo->findById($id);
-        if ($row === null) {
-            return array('dto' => new RelatedRecordDto('event_code', '0', 'event_code', '0', null), 'fields' => $this->eventCodeFieldMap(), 'labels' => $this->eventCodeLabelMap(), 'url' => '#', 'label' => _('Event #') . (string) $id);
+        // Event codes now live in CodeMaster (code_type = 'hrm.event_code').
+        // The $id is treated as a code_value lookup.
+        $eventPayload = array(
+            'code_type' => 'hrm.event_code',
+            'code_value' => (string) $id,
+            'dto' => $dto ?? new RelatedRecordDto('code_master', '0', 'code_master', '0', null),
+        );
+        if (function_exists('hook_invoke_all')) {
+            hook_invoke_all('ksf_FA_CodeMaster', 'CODEMASTER_RESOLVE', $eventPayload);
         }
-        $e = EventCodeDTO::fromArray($row);
-        $dto = $dto ?? new RelatedRecordDto('event_code', (string) $e->id, 'event_code', (string) $e->id, null);
-        return array('dto' => $dto, 'fields' => array('eventCode' => $e->eventCode, 'eventName' => $e->eventName, 'impactMultiplier' => $e->impactMultiplier, 'payType' => $e->payType), 'labels' => $this->eventCodeLabelMap(), 'url' => '/modules/ksf_FA_HRM_TimeTracking/pages/event_code_form.php?action=edit&event_code_id=' . $e->id, 'label' => $e->getDisplayLabel());
+        $result = $eventPayload['result'] ?? null;
+        if ($result === null || !is_array($result)) {
+            return array('dto' => new RelatedRecordDto('event_code', '0', 'event_code', '0', null), 'fields' => $this->eventCodeFieldMap(), 'labels' => $this->eventCodeLabelMap(), 'url' => '#', 'label' => _('Event Code not found'));
+        }
+        return $result;
     }
     public function listAllTimeEntries(): array {
         $rows = $this->timeRepo->findAll();
         $results = array();
         foreach ($rows as $row) {
             $t = TimeEntryDTO::fromArray($row);
-            $results[] = array('id' => $t->id, 'dto' => new RelatedRecordDto('time_entry', (string) $t->id, 'time_entry', (string) $t->id, null), 'fields' => array('employeeId' => $t->employeeName, 'eventCode' => $t->eventCode, 'hours' => $t->hours, 'workDate' => $t->workDate, 'payImpact' => $t->payImpact), 'labels' => $this->timeEntryLabelMap(), 'url' => '/modules/ksf_FA_HRM_TimeTracking/pages/time_entry_form.php?action=edit&time_entry_id=' . $t->id, 'label' => $t->getDisplayLabel());
+            $results[] = array(
+                'id'    => $t->id,
+                'dto'   => new RelatedRecordDto('time_entry', (string) $t->id, 'time_entry', (string) $t->id, null),
+                'fields' => array(
+                    'employeeId' => $t->employeeName,
+                    'eventCode' => $t->eventCode,
+                    'hours' => $t->hours,
+                    'workDate' => $t->workDate,
+                    'payImpact' => $t->payImpact,
+                ),
+                'labels' => $this->timeEntryLabelMap(),
+                'url'    => '/modules/ksf_FA_HRM_TimeTracking/pages/time_entry_form.php?action=edit&time_entry_id=' . $t->id,
+                'label'  => $t->getDisplayLabel(),
+            );
         }
         return $results;
     }
     public function listAllEventCodes(): array {
-        $rows = $this->eventRepo->findAll();
-        $results = array();
-        foreach ($rows as $row) {
-            $e = EventCodeDTO::fromArray($row);
-            $results[] = array('id' => $e->id, 'dto' => new RelatedRecordDto('event_code', (string) $e->id, 'event_code', (string) $e->id, null), 'fields' => array('eventCode' => $e->eventCode, 'eventName' => $e->eventName, 'impactMultiplier' => $e->impactMultiplier, 'payType' => $e->payType), 'labels' => $this->eventCodeLabelMap(), 'url' => '/modules/ksf_FA_HRM_TimeTracking/pages/event_code_form.php?action=edit&event_code_id=' . $e->id, 'label' => $e->getDisplayLabel());
+        // Event codes are managed in CodeMaster; delegate
+        $payload = array('code_type' => 'hrm.event_code');
+        if (function_exists('hook_invoke_all')) {
+            hook_invoke_all('ksf_FA_CodeMaster', 'CODEMASTER_LIST', $payload);
         }
-        return $results;
+        return $payload['result'] ?? array();
     }
     public function calculatePayImpact(string $eventCode, float $hours, float $baseRate): array {
-        $event = $this->eventRepo->findByCode($eventCode);
-        $multiplier = $event !== null ? (float) ($event['impact_multiplier'] ?? 1.00) : 1.00;
-        $payType = $event !== null ? (string) ($event['pay_type'] ?? 'hourly') : 'hourly';
+        // Look up event code multiplier from CodeMaster
+        $multiplier = 1.00;
+        $payType = 'hourly';
+        $eventPayload = array(
+            'code_type' => 'hrm.event_code',
+            'code_value' => $eventCode,
+            'dto' => new RelatedRecordDto('code_master', '0', 'code_master', '0', null),
+        );
+        if (function_exists('hook_invoke_all')) {
+            hook_invoke_all('ksf_FA_CodeMaster', 'CODEMASTER_RESOLVE', $eventPayload);
+        }
+        $resolved = $eventPayload['result'] ?? null;
+        if ($resolved !== null && is_array($resolved) && isset($resolved['fields'])) {
+            // impact_multiplier is stored in usage_instructions or we need a separate field
+            // For now, use a default based on code value
+            $codeValue = (string) $eventCode;
+            $multipliers = array('REG' => 1.00, 'OT' => 1.50, 'OT2' => 2.00, 'HOL' => 2.00);
+            $multiplier = $multipliers[$codeValue] ?? 1.00;
+        }
         $impactedHours = $hours * $multiplier;
         $amount = $impactedHours * $baseRate;
         return array(
@@ -71,6 +130,6 @@ final class TimeTrackingService {
     }
     public function eventCodeFieldMap(): array { return $this->eventCodeLabelMap(); }
     public function eventCodeLabelMap(): array {
-        return array('eventCode' => _('Event Code'), 'eventName' => _('Event Name'), 'impactMultiplier' => _('Impact Multiplier'), 'payType' => _('Pay Type'));
+        return array('code' => _('Code'), 'name' => _('Name'), 'description' => _('Description'), 'usage_instructions' => _('Usage Instructions'));
     }
 }

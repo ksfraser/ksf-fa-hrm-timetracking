@@ -75,11 +75,12 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
                 'payImpact' => _('Pay Impact'),
             ));
         } elseif ($data['type'] === 'event_code') {
+            // Event code fields come from CodeMaster; delegate to CodeMaster
             $data['fields'] = array_merge($data['fields'], array(
-                'eventCode' => _('Event Code'),
-                'eventName' => _('Event Name'),
-                'impactMultiplier' => _('Impact Multiplier'),
-                'payType' => _('Pay Type'),
+                'code' => _('Code'),
+                'name' => _('Name'),
+                'description' => _('Description'),
+                'usage_instructions' => _('Usage Instructions'),
             ));
         }
         return null;
@@ -104,16 +105,20 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
     public function EVENTCODE_RESOLVE(&$data, $opts = null) {
         if (!isset($data['event_code_id']) || !is_numeric($data['event_code_id'])) { $data['error'] = 'EVENTCODE_RESOLVE requires data[event_code_id]'; return null; }
         if (!isset($data['dto']) || !$data['dto'] instanceof RelatedRecordDto) { $data['error'] = 'EVENTCODE_RESOLVE requires data[dto] as RelatedRecordDto'; return null; }
-        $service = new \Ksfraser\FrontAccounting\HRM\TimeTracking\Service\TimeTrackingService();
-        $data['result'] = $service->resolveEventCodeById((int) $data['event_code_id'], $data['dto']);
+        // Delegate event code resolution to CodeMaster
+        $data['result'] = array(
+            'codeType' => 'hrm.event_code',
+            'codeValue' => (string) $data['event_code_id'],
+            'delegateTo' => 'ksf_FA_CodeMaster',
+        );
         return null;
     }
     public function EVENTCODE_FIELDS(&$data, $opts = null) {
         $data['fields'] = array(
-            'eventCode' => _('Event Code'),
-            'eventName' => _('Event Name'),
-            'impactMultiplier' => _('Impact Multiplier'),
-            'payType' => _('Pay Type'),
+            'code' => _('Code'),
+            'name' => _('Name'),
+            'description' => _('Description'),
+            'usage_instructions' => _('Usage Instructions'),
         );
         return null;
     }
