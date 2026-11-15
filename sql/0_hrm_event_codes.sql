@@ -1,7 +1,7 @@
 -- ksf_FA_HRM_TimeTracking: event codes are now managed in ksf_FA_CodeMaster
--- (0_ksf_code_master, code_type = 'hrm.event_code').
+-- (0_ksf_code_master, code_type = 'hrm.activity_code').
 -- This file is kept for backward compatibility; the table is intentionally
--- empty. All event code definitions live in ksf_FA_CodeMaster.
+-- empty. All activity code definitions live in ksf_FA_CodeMaster.
 
 CREATE TABLE IF NOT EXISTS `0_hrm_event_codes` (
   `id`            INT(11) NOT NULL AUTO_INCREMENT,

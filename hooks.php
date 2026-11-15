@@ -105,7 +105,8 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
         if ($data['type'] === 'time_entry') {
             $data['fields'] = array_merge($data['fields'], array(
                 'employeeId' => _('Employee'),
-                'eventCode' => _('Event Code'),
+                'project_id' => _('Project'),
+                'activity_code' => _('Activity Code'),
                 'hours' => _('Hours'),
                 'workDate' => _('Work Date'),
                 'payImpact' => _('Pay Impact'),
@@ -137,7 +138,8 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
     public function TIMEENTRY_FIELDS(&$data, $opts = null) {
         $data['fields'] = array(
             'employeeId' => _('Employee'),
-            'eventCode' => _('Event Code'),
+            'project_id' => _('Project'),
+            'activity_code' => _('Activity Code'),
             'hours' => _('Hours'),
             'workDate' => _('Work Date'),
             'payImpact' => _('Pay Impact'),
