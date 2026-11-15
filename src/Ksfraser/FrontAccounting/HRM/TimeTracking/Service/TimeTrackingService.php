@@ -4,11 +4,22 @@ namespace Ksfraser\FrontAccounting\HRM\TimeTracking\Service;
 use Ksfraser\FrontAccounting\HRM\TimeTracking\DTO\TimeEntryDTO;
 use Ksfraser\FrontAccounting\HRM\TimeTracking\Repository\TimeEntryRepository;
 use ksfraser\RelatedTo\DTO\RelatedRecordDto;
+/**
+ * @BABOK Related: BR-TT-002
+ * @BABOK Related: BR-TT-003
+ * @BABOK Related: BR-TT-004
+ */
 final class TimeTrackingService {
     private $timeRepo;
+    /**
+     * @BABOK Related: BR-TT-002
+     */
     public function __construct(?TimeEntryRepository $timeRepo = null) {
         $this->timeRepo = $timeRepo ?? new TimeEntryRepository();
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function resolveTimeEntryById(int $id, ?RelatedRecordDto $dto = null): array {
         $row = $this->timeRepo->findById($id);
         if ($row === null) {
@@ -45,6 +56,9 @@ final class TimeTrackingService {
             'event_resolved' => $eventResolved,
         );
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function resolveEventCodeById(int $id, ?RelatedRecordDto $dto = null): array {
         // Event codes now live in CodeMaster (code_type = 'hrm.event_code').
         // The $id is treated as a code_value lookup.
@@ -62,6 +76,9 @@ final class TimeTrackingService {
         }
         return $result;
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function listAllTimeEntries(): array {
         $rows = $this->timeRepo->findAll();
         $results = array();
@@ -84,6 +101,9 @@ final class TimeTrackingService {
         }
         return $results;
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function listAllEventCodes(): array {
         // Event codes are managed in CodeMaster; delegate
         $payload = array('code_type' => 'hrm.event_code');
@@ -92,6 +112,9 @@ final class TimeTrackingService {
         }
         return $payload['result'] ?? array();
     }
+    /**
+     * @BABOK Related: BR-TT-003
+     */
     public function calculatePayImpact(string $eventCode, float $hours, float $baseRate): array {
         // Look up event code multiplier from CodeMaster
         $multiplier = 1.00;
@@ -124,11 +147,23 @@ final class TimeTrackingService {
             'amount' => $amount,
         );
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function timeEntryFieldMap(): array { return $this->timeEntryLabelMap(); }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function timeEntryLabelMap(): array {
         return array('employeeId' => _('Employee'), 'eventCode' => _('Event Code'), 'hours' => _('Hours'), 'workDate' => _('Work Date'), 'payImpact' => _('Pay Impact'));
     }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function eventCodeFieldMap(): array { return $this->eventCodeLabelMap(); }
+    /**
+     * @BABOK Related: BR-TT-004
+     */
     public function eventCodeLabelMap(): array {
         return array('code' => _('Code'), 'name' => _('Name'), 'description' => _('Description'), 'usage_instructions' => _('Usage Instructions'));
     }

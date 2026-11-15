@@ -1,8 +1,14 @@
 <?php
 declare(strict_types=1);
 namespace Ksfraser\FrontAccounting\HRM\TimeTracking\Repository;
+/**
+ * @BABOK Related: BR-TT-001
+ */
 final class EventCodeRepository {
     private string $table = 'hrm_event_codes';
+    /**
+     * @BABOK Related: BR-TT-001
+     */
     public function findAll(): array {
         if (!function_exists('db_query') || !defined('TB_PREF')) { return array(); }
         $sql = "SELECT * FROM " . TB_PREF . $this->table . " WHERE is_active = 1 ORDER BY event_code ASC";
@@ -12,6 +18,9 @@ final class EventCodeRepository {
         while (($row = db_fetch_assoc($result)) !== false && $row !== null) { $rows[] = $row; }
         return $rows;
     }
+    /**
+     * @BABOK Related: BR-TT-001
+     */
     public function findById(int $id): ?array {
         if (!function_exists('db_query') || !defined('TB_PREF')) { return null; }
         $sql = "SELECT * FROM " . TB_PREF . $this->table . " WHERE id = " . (int) $id;
@@ -20,6 +29,9 @@ final class EventCodeRepository {
         $row = db_fetch_assoc($result);
         return $row === false ? null : $row;
     }
+    /**
+     * @BABOK Related: BR-TT-001
+     */
     public function findByCode(string $code): ?array {
         if (!function_exists('db_query') || !defined('TB_PREF')) { return null; }
         $sql = "SELECT * FROM " . TB_PREF . $this->table . " WHERE event_code = " . $this->escape($code);
@@ -28,6 +40,9 @@ final class EventCodeRepository {
         $row = db_fetch_assoc($result);
         return $row === false ? null : $row;
     }
+    /**
+     * @BABOK Related: BR-TT-001
+     */
     public function save(array $data): int {
         if (!function_exists('db_query') || !defined('TB_PREF')) { return 0; }
         $sql = "INSERT INTO " . TB_PREF . $this->table . " (
@@ -42,6 +57,9 @@ final class EventCodeRepository {
         db_query($sql, 'Could not save event code');
         return db_insert_id();
     }
+    /**
+     * @BABOK Related: BR-TT-001
+     */
     public function update(int $id, array $data): void {
         if (!function_exists('db_query') || !defined('TB_PREF')) { return; }
         $sets = [];
