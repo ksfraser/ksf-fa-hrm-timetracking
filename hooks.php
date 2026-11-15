@@ -154,10 +154,25 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
         if (!isset($data['event_code_id']) || !is_numeric($data['event_code_id'])) { $data['error'] = 'EVENTCODE_RESOLVE requires data[event_code_id]'; return null; }
         if (!isset($data['dto']) || !$data['dto'] instanceof RelatedRecordDto) { $data['error'] = 'EVENTCODE_RESOLVE requires data[dto] as RelatedRecordDto'; return null; }
         // Delegate event code resolution to CodeMaster
+        $payload = array(
+            'code_type' => 'hrm.activity_code',
+            'code_value' => (string) $data['event_code_id'],
+            'dto' => new RelatedRecordDto('code_master', '0', 'code_master', '0', null),
+        );
+        if (function_exists('hook_invoke_all')) {
+            hook_invoke_all('ksf_FA_CodeMaster', 'CODEMASTER_RESOLVE', $payload);
+        }
+        $result = $payload['result'] ?? null;
+        if ($result === null || !is_array($result) || !isset($result['fields'])) {
+            $data['error'] = 'EVENTCODE_RESOLVE: no result from CodeMaster for event code ' . (string) $data['event_code_id'];
+            return null;
+        }
         $data['result'] = array(
-            'codeType' => 'hrm.event_code',
-            'codeValue' => (string) $data['event_code_id'],
-            'delegateTo' => 'ksf_FA_CodeMaster',
+            'dto' => $result['dto'] ?? $data['dto'],
+            'fields' => $result['fields'],
+            'labels' => $result['labels'],
+            'url' => $result['url'],
+            'label' => $result['label'],
         );
         return null;
     }
