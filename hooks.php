@@ -189,3 +189,16 @@ class hooks_ksf_FA_HRM_TimeTracking extends hooks {
         return null;
     }
 }
+
+/**
+ * crm_register_tabs - allows other modules to register their tabs with CRM.
+ *
+ * @param array &$data Modified by reference; 'tabs' array is appended to.
+ */
+function crm_register_tabs(&$data)
+{
+    if (!isset($data['tabs']) || !is_array($data['tabs'])) {
+        $data['tabs'] = [];
+    }
+    // Time Tracking module registers its tab here
+}
